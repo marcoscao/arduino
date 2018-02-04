@@ -16,21 +16,60 @@
 	
 */
 
+#include <VirtualWire.h>
+
 #define WM_SLEEP 0
 #define WM_ALERT 1
 #define WM_ATTEND 2
 #define WM_CHECK 3
 
 #define LED_WM_PIN 13
+#define RF_RECEPTOR_PIN 4
 
 #define LED_BLINK_SLOW 3000
 #define LED_BLINK_FAST 900
+
 
 int g_wm = WM_ALERT;
 
 bool g_led_wm_blink_onoff = false;
 unsigned long g_led_wm_blink_prev_t = 0;
 
+
+
+void _read_from_rf()
+{
+	uint8_t buf[VW_MAX_MESSAGE_LEN];
+    uint8_t buflen = VW_MAX_MESSAGE_LEN;
+    int dato1=0;
+    float dato2=0.0;
+
+ if (vw_get_message((uint8_t *)buf,&buflen))
+    {
+	int i;
+	String  DatoCadena="";
+        if((char)buf[0]=='i') //verificamos el inicio de trama
+        {
+            for (i = 1; i < buflen; i++)
+            {
+        	DatoCadena.concat((char)buf[i]);
+            }
+            dato1=DatoCadena.toInt();
+            Serial.print("Dato1 recivido: ");
+            Serial.println(dato1);
+        }
+        else if((char)buf[0]=='f') //verificamos el inicio de trama
+        {
+            for (i = 1; i < buflen; i++)
+            {
+        	DatoCadena.concat((char)buf[i]);
+            }
+            dato2=DatoCadena.toFloat();
+            Serial.print("Dato2 recivido: ");
+            Serial.println(dato2);
+        }
+    }
+}
 
 
 void _blink_led_wm( unsigned long wait_t )
@@ -120,18 +159,37 @@ void loop_wm()
 	}
 }
 
+void setup_rf()
+{
+    Serial.println("Setting up RF Receptor");
+
+    vw_setup(2000);
+    vw_set_rx_pin( RF_RECEPTOR_PIN );
+    vw_rx_start();
+}
+
+void loop_rf()
+{
+	_read_from_rf();
+}
 
 void setup()
 {
-  	pinMode( LED_WM, OUTPUT );
+	Serial.begin(9600);	
+  	
+	pinMode( LED_WM, OUTPUT );
 
 	set_wm( g_wm );
+	
+	setup_rf();
 }
 
 void loop()
 {
 	loop_wm();
+	loop_rf();
 }
+
 
 
 /*
