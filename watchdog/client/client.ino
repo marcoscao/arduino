@@ -2,7 +2,28 @@
 	Client
 
 	Sends radio signal when someone enters the room
-	
+
+	RF 
+		- works like a UART connection between 2 MCUs  ( microcontrollers ) but with the exception of not error validation
+		- recommended velocity of 1200 or 2400 baud
+		- used for redundant data ( data could be lost )
+
+
+	Hardware
+
+	* RF Emitter		: 
+		Pin 2 
+		Tx Pin ( 1 ) if using UART ( serial communication )
+		
+
+	* Antenna			: one of...
+		Whip antenna ( 16,5 cm )
+		Helical antenna ( 5 mm diameter and 3,4 cm long )
+
+	* Led					: Pin 13 
+	* Led Resistence	: 330 Ohm
+
+
 */
 
 #include <VirtualWire.h>

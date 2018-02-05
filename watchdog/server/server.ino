@@ -8,12 +8,26 @@
 	2 : attend, attending a client alert
 	3 : check, checking environment and systems
 	
+	RF 
+		- works like a UART connection between 2 MCUs  ( microcontrollers ) but with the exception of not error validation
+		- recommended velocity of 1200 or 2400 baud
+		- used for redundant data ( data could be lost )
+	
 
 	Hardware:
 
-	WM Led				: attached to pin 13
-	WM Led Resistence	: 330 Ohm
+	* RF Receptorr		: 
+		Pin 2 ( no UART )
+		Rx Pin ( 0 ) if using UART ( serial communication )
+								
+	* Antenna			: one of...
+		Whip antenna ( 16,5 cm )
+		Helical antenna ( 5 mm diameter and 3,4 cm long )
 	
+	* Working Mode Led					: Pin 13 
+	* Working Mode Led Resistence		: 330 Ohm
+
+
 */
 
 #include <VirtualWire.h>
