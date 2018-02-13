@@ -30,15 +30,18 @@
 
 */
 
-#include <VirtualWire.h>
+#include <RadioHead.h>
+#include <RH_ASK.h>
+
+//#include <VirtualWire.h>
 
 #define WM_SLEEP 0
 #define WM_ALERT 1
 #define WM_ATTEND 2
 #define WM_CHECK 3
 
-#define LED_WM_PIN 13
-#define RF_RECEPTOR_PIN 4
+#define LED_WM 13
+//#define RF_RECEPTOR_PIN 4
 
 #define LED_BLINK_SLOW 3000
 #define LED_BLINK_FAST 900
@@ -49,8 +52,10 @@ int g_wm = WM_ALERT;
 bool g_led_wm_blink_onoff = false;
 unsigned long g_led_wm_blink_prev_t = 0;
 
+// 2000 bps, RX ( D4, pin 3 ), TX ( D3, pin 2 )
+RH_ASK driver( 2000, 3, 4 );
 
-
+/*
 void _read_from_rf()
 {
 	uint8_t buf[VW_MAX_MESSAGE_LEN];
@@ -84,7 +89,7 @@ void _read_from_rf()
         }
     }
 }
-
+*/
 
 void _blink_led_wm( unsigned long wait_t )
 {
@@ -95,7 +100,7 @@ void _blink_led_wm( unsigned long wait_t )
 		g_led_wm_blink_prev_t = curr_t;
 		g_led_wm_blink_onoff = !g_led_wm_blink_onoff;
 
-		digitalWrite( LED_WM_PIN, g_led_wm_blink_onoff );
+		digitalWrite( LED_WM, g_led_wm_blink_onoff );
 	}
 
 }
@@ -104,7 +109,7 @@ void _blink_led_wm( unsigned long wait_t )
 void _set_wm_sleep()
 {
 	g_wm = WM_SLEEP;
-	digitalWrite( LED_WM_PIN, LOW );
+	digitalWrite( LED_WM, LOW );
 }
 
 void _set_wm_alert()
@@ -112,7 +117,7 @@ void _set_wm_alert()
 	g_wm = WM_ALERT;
 	g_led_wm_blink_onoff = true;
 	g_led_wm_blink_prev_t = 0;
-	digitalWrite( LED_WM_PIN, HIGH );
+	digitalWrite( LED_WM, HIGH );
 }
 
 void _set_wm_attend()
@@ -120,7 +125,7 @@ void _set_wm_attend()
 	g_wm = WM_ATTEND;
 	g_led_wm_blink_onoff = true;
 	g_led_wm_blink_prev_t = 0;
-	digitalWrite( LED_WM_PIN, HIGH );
+	digitalWrite( LED_WM, HIGH );
 }
 
 void _set_wm_check()
@@ -177,14 +182,14 @@ void setup_rf()
 {
     Serial.println("Setting up RF Receptor");
 
-    vw_setup(2000);
-    vw_set_rx_pin( RF_RECEPTOR_PIN );
-    vw_rx_start();
+    //vw_setup(2000);
+    //vw_set_rx_pin( RF_RECEPTOR_PIN );
+    //vw_rx_start();
 }
 
 void loop_rf()
 {
-	_read_from_rf();
+	//_read_from_rf();
 }
 
 void setup()
@@ -192,16 +197,34 @@ void setup()
 	Serial.begin(9600);	
   	
 	pinMode( LED_WM, OUTPUT );
-
-	set_wm( g_wm );
+  digitalWrite( LED_WM, false );
+  
+   if(!driver.init() )
+  {
+    Serial.println("Oops! Something wrong initializing Radio Module" );
+  }
+  else
+  {
+    Serial.println("Radio module initialized correctly" );
+  }
+	//set_wm( g_wm );
 	
-	setup_rf();
+	//setup_rf();
 }
 
 void loop()
 {
-	loop_wm();
-	loop_rf();
+	//loop_wm();
+	//loop_rf();
+  uint8_t buf[RH_ASK_MAX_MESSAGE_LEN];
+  uint8_t buflen = sizeof(buf);
+  if(driver.recv(buf, &buflen))
+  {
+    digitalWrite(LED_WM,true);
+    Serial.println(" Great! Received radio message" );
+    driver.printBuffer("Got: ", buf, buflen);
+    //Serial.println( (unit8_t*)buf ); 
+  }
 }
 
 
