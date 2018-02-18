@@ -1,31 +1,31 @@
 #include <RadioHead.h>
 #include <RH_ASK.h>
 /*
-#include <RH_CC110.h>
-#include <RH_E32.h>
-#include <RH_MRF89.h>
-#include <RH_NRF24.h>
-#include <RH_NRF51.h>
-#include <RH_NRF905.h>
-#include <RH_RF22.h>
-#include <RH_RF24.h>
-#include <RH_RF69.h>
-#include <RH_RF95.h>
-#include <RH_Serial.h>
-#include <RH_TCP.h>
-#include <RHCRC.h>
-#include <RHDatagram.h>
-#include <RHEncryptedDriver.h>
-#include <RHGenericDriver.h>
-#include <RHGenericSPI.h>
-#include <RHHardwareSPI.h>
-#include <RHMesh.h>
-#include <RHNRFSPIDriver.h>
-#include <RHReliableDatagram.h>
-#include <RHRouter.h>
-#include <RHSoftwareSPI.h>
-#include <RHSPIDriver.h>
-#include <RHTcpProtocol.h>
+  #include <RH_CC110.h>
+  #include <RH_E32.h>
+  #include <RH_MRF89.h>
+  #include <RH_NRF24.h>
+  #include <RH_NRF51.h>
+  #include <RH_NRF905.h>
+  #include <RH_RF22.h>
+  #include <RH_RF24.h>
+  #include <RH_RF69.h>
+  #include <RH_RF95.h>
+  #include <RH_Serial.h>
+  #include <RH_TCP.h>
+  #include <RHCRC.h>
+  #include <RHDatagram.h>
+  #include <RHEncryptedDriver.h>
+  #include <RHGenericDriver.h>
+  #include <RHGenericSPI.h>
+  #include <RHHardwareSPI.h>
+  #include <RHMesh.h>
+  #include <RHNRFSPIDriver.h>
+  #include <RHReliableDatagram.h>
+  #include <RHRouter.h>
+  #include <RHSoftwareSPI.h>
+  #include <RHSPIDriver.h>
+  #include <RHTcpProtocol.h>
 */
 /*
 	Client
@@ -73,12 +73,16 @@ bool g_pir_prev_state = LOW;
 #define CLIENT_ADDRESS 1
 
 // 2000 bps, RX ( D4, pin 3 ), TX ( D3, pin 2 )
-RH_ASK driver( 2000, 3 );
+//RH_ASK driver( 2000, 3 );
+
+// 2000 bps, sending ( TX ) through D9   ( don't know whether D2 and D10 are used )
+RH_ASK driver( 2000, 2, 9, 10 );
+
 //RHReliableDatagram manager( driver, CLIENT_ADDRESS );
 
-uint8_t data[] = "Sending Presence ALARM!";
-uint8_t buf[RH_ASK_MAX_MESSAGE_LEN];
-
+//uint8_t msg_data[] = "ALARM!! Presence detected in the room!";
+//uint8_t msg_buf[RH_ASK_MAX_MESSAGE_LEN];
+const char * msg_data = "ALARM!! Presence detected in the room!";
 
 void _blink_led( unsigned long wait_t )
 {
@@ -96,7 +100,7 @@ void _blink_led( unsigned long wait_t )
 
 void _send_rf_data( )
 {
-//  char buf[VW_MAX_MESSAGE_LEN];
+  //  char buf[VW_MAX_MESSAGE_LEN];
   char buf[512];
   float f = 3.141516;
   String s = "Value read from room: ";
@@ -108,7 +112,7 @@ void _send_rf_data( )
 }
 
 void setup()
-{ 
+{
   Serial.begin( 9600 );
   pinMode( LED_PIN, OUTPUT );
   pinMode( PIR_PIN, INPUT );
@@ -124,7 +128,7 @@ void setup()
   Serial.println( " seconds ) " );
 
   // Calibrate PIr ( do reads during 10-60 seconds )
-  for(int i = 0; i < calib_t; i++ )
+  for (int i = 0; i < calib_t; i++ )
   {
     digitalRead( PIR_PIN);
     Serial.print(i);
@@ -134,7 +138,7 @@ void setup()
   Serial.println("");
   Serial.println( "PIR Sensor ready");
 
-  if(!driver.init() )
+  if (!driver.init() )
   {
     Serial.println("Oops! Something wrong initializing Radio Transmitter" );
   }
@@ -152,12 +156,12 @@ void loop()
 {
   //unsigned long curr_t = millis();
   //int pir_val = g_pir_prev_state;
-  
+
   //if( curr_t - g_check_pir_t > 100 )
   //{
-    int pir_val = digitalRead( PIR_PIN );
+  int pir_val = digitalRead( PIR_PIN );
   //}
-  
+
   //Serial.println( "********** PIR value: " + pir_val );
 
   if ( pir_val == HIGH )
@@ -171,9 +175,9 @@ void loop()
       digitalWrite( LED_PIN, HIGH );
 
       // Send radio message
-      const char * msg = "Sending";
+      //const char * msg = "ALARM! Presence in the room";
       Serial.println("   going to send radio message" );
-      driver.send((uint8_t*)msg,strlen(msg) );
+      driver.send((uint8_t*)msg_data, strlen(msg_data) );
       Serial.println( "   waiting for packet sent" );
       driver.waitPacketSent();
       Serial.println( "   Alarm message has been sent" );
