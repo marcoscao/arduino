@@ -1,12 +1,5 @@
 /*
 	Different working modes.
-
-	Main working modes:
-
-	0 : sleep, no reaction to clients signals
-	1 : alert, waiting for client signals to perform actions
-	2 : attend, attending a client alert
-	3 : check, checking environment and systems
 	
 	RF 
 		- works like a UART connection between 2 MCUs  ( microcontrollers ) but with the exception of not error validation
@@ -24,24 +17,64 @@
 		Whip antenna ( 16,5 cm )
 		Helical antenna ( 5 mm diameter and 3,4 cm long )
 	
-	* Working Mode Led					: Pin 13 
+	* Working Mode Led					    : Pin 13 
 	* Working Mode Led Resistence		: 330 Ohm
 
-
 */
+
+#define USE_TFT 1
+
+#ifdef USE_TFT
+
+#include <Adafruit_GFX.h>    // Core graphics library
+#include <Adafruit_TFTLCD.h> // Hardware-specific library
+#include <TouchScreen.h>
+
+#define YP A2  // must be an analog pin, use "An" notation!
+#define XM A3  // must be an analog pin, use "An" notation!
+#define YM 8   // can be a digital pin
+#define XP 9   // can be a digital pin
+
+#define TS_MINX 130
+#define TS_MAXX 905
+
+#define TS_MINY 75
+#define TS_MAXY 930
+
+// For better pressure precision, we need to know the resistance
+// between X+ and X- Use any multimeter to read it
+// For the one we're using, its 300 ohms across the X plate
+TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
+
+
+// Assign human-readable names to some common 16-bit color values:
+#define  BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+
+#define BOXSIZE 40
+#define PENRADIUS 2
+int oldcolor, currentcolor;
+
+#include <MCUFRIEND_kbv.h>
+MCUFRIEND_kbv tft;
+// If using the shield, all control and data lines are fixed, and
+// a simpler declaration can optionally be used:
+//Adafruit_TFTLCD tft;
+
+#endif
+
 
 #include <RadioHead.h>
 #include <RH_ASK.h>
 
 //#include <Wire.h> 
-#include <LiquidCrystal_I2C.h>
-
-//#include <VirtualWire.h>
-
-#define WM_SLEEP 0
-#define WM_ALERT 1
-#define WM_ATTEND 2
-#define WM_CHECK 3
+//#include <LiquidCrystal_I2C.h>
 
 #define LED_WM 13
 #define BUZ_PIN 4
@@ -50,22 +83,24 @@
 #define LED_BLINK_SLOW 3000
 #define LED_BLINK_FAST 900
 
-//LiquidCrystal_I2C lcd(0x3F,20,4);
-LiquidCrystal_I2C lcd(0x27,20,4);
+////LiquidCrystal_I2C lcd(0x3F,20,4);
+//LiquidCrystal_I2C lcd(0x27,20,4);
 
-int g_wm = WM_ALERT;
+//int g_wm = WM_ALERT;
 
 bool g_led_wm_blink_onoff = false;
 unsigned long g_led_wm_blink_prev_t = 0;
 
+
 // 2000 bps, RX connected to D9, ( 2 and 10 guess not used, or perhaps for send messages )
 RH_ASK driver( 2000, 9, 2, 10 );
 
- unsigned long prev_t = 0;
- unsigned long wait_t = 1500;
+
+ unsigned long msg_led_prev_t = 0;
+ unsigned long msg_led_wait_t = 1500;
   
- uint8_t buf[RH_ASK_MAX_MESSAGE_LEN];
- uint8_t buflen = sizeof(buf);
+ uint8_t msg_buffer[RH_ASK_MAX_MESSAGE_LEN];
+ uint8_t msg_buffer_length = sizeof(msg_buffer);
 
 /*
 void _read_from_rf()
@@ -118,102 +153,10 @@ void _blink_led_wm( unsigned long wait_t )
 }
 
 
-void _set_wm_sleep()
-{
-	g_wm = WM_SLEEP;
-	digitalWrite( LED_WM, LOW );
-}
-
-void _set_wm_alert()
-{
-	g_wm = WM_ALERT;
-	g_led_wm_blink_onoff = true;
-	g_led_wm_blink_prev_t = 0;
-	digitalWrite( LED_WM, HIGH );
-}
-
-void _set_wm_attend()
-{
-	g_wm = WM_ATTEND;
-	g_led_wm_blink_onoff = true;
-	g_led_wm_blink_prev_t = 0;
-	digitalWrite( LED_WM, HIGH );
-}
-
-void _set_wm_check()
-{
-	g_wm = WM_CHECK;
-	digitalWrite( LED_WM, HIGH );
-}
-
-void _loop_wm_sleep()
-{
-	// led off
-}
-
-void _loop_wm_alert()
-{
-	// led blinks slowly
-	_blink_led_wm( LED_BLINK_SLOW );
-}
-
-void _loop_wm_attend()
-{
-	// led blinks faster
-	_blink_led_wm( LED_BLINK_FAST );
-}
-
-void _loop_wm_check()
-{
-	// led on ( no blink )
-}
-
-
-void set_wm( int new_wm )
-{
-	switch( new_wm ) {
-		case WM_SLEEP : _set_wm_sleep(); break;
-		case WM_ALERT : _set_wm_alert(); break;
-		case WM_ATTEND : _set_wm_attend(); break;
-		case WM_CHECK : _set_wm_check(); break;
-	}
-
-}
-
-void loop_wm()
-{
-	switch( g_wm ) {
-		case WM_SLEEP : _loop_wm_sleep(); break;
-		case WM_ALERT : _loop_wm_alert(); break;
-		case WM_ATTEND : _loop_wm_attend(); break;
-		case WM_CHECK : _loop_wm_check(); break;
-	}
-}
-
 void setup_rf()
 {
-    Serial.println("Setting up RF Receptor");
-
-    //vw_setup(2000);
-    //vw_set_rx_pin( RF_RECEPTOR_PIN );
-    //vw_rx_start();
-}
-
-void loop_rf()
-{
-	//_read_from_rf();
-}
-
-void setup()
-{
-	Serial.begin(9600);	
-  	
-	pinMode( LED_WM, OUTPUT );
-  digitalWrite( LED_WM, false );
-
-  pinMode( BUZ_PIN, OUTPUT );
-  
-   if(!driver.init() )
+  Serial.println("Setting up RF Receptor");
+  if(!driver.init() )
   {
     Serial.println("Oops! Something wrong initializing Radio Module" );
   }
@@ -221,20 +164,92 @@ void setup()
   {
     Serial.println("Radio module initialized correctly" );
   }
-	//set_wm( g_wm );
-	
-	//setup_rf();
-
-  
-  lcd.init();
-  lcd.backlight();
-  lcd.setContrast(40);
-  lcd.print("Ready!");
 }
 
-void loop()
+void setup_lcd()
 {
-  if(driver.recv(buf, &buflen))
+  //lcd.init();
+  //lcd.backlight();
+  //lcd.setContrast(40);
+  //lcd.print("Ready!");
+}
+
+void setup_tft()
+{
+  tft.reset();
+
+  uint16_t identifier = tft.readID();
+
+  tft.begin(identifier);
+  Serial.print("TFT size is "); Serial.print(tft.width()); Serial.print("x"); Serial.println(tft.height());
+  tft.setRotation(1);
+
+  tft.fillScreen(BLACK);
+
+  tft.fillRect(50, 20, BOXSIZE, BOXSIZE, RED);
+  //tft.fillRect(BOXSIZE, 0, BOXSIZE, BOXSIZE, YELLOW);
+  //tft.fillRect(BOXSIZE*2, 0, BOXSIZE, BOXSIZE, GREEN);
+  //tft.drawRect(0, 0, BOXSIZE, BOXSIZE, WHITE);
+  //currentcolor = RED;
+ 
+  //pinMode(13, OUTPUT);
+  
+   tft.fillScreen(BLACK);
+  
+  unsigned long start = micros();
+  tft.setCursor(0, 0);
+  
+  tft.setTextColor(RED);  
+  tft.setTextSize(2);
+  tft.println("Control Inteligente Hogar");
+  //tft.println(01234.56789);
+  //tft.println(0xDEADBEEF, HEX);
+  tft.println();
+  tft.println();
+  tft.setTextColor(GREEN); tft.setTextSize(2);
+  tft.println("Ubicacion  Temperatura  Humedad  Presen");
+  tft.println("---------------------------------------");
+  tft.println("Salon        23.20 C      45%      X");
+  //tft.println("Habitacion   21.20 C      45%");
+  //tft.println("Terraza      19.10 C      46%");
+  //tft.println("Atico        19.10 C      46%");
+  //tft.println("Atico-Terr   19.10 C      46%");  
+  //tft.println("_______________________________________");
+  //tft.println();
+  //tft.println();
+  //tft.println();
+  //tft.println();
+  //tft.println();
+  //tft.println();
+  //tft.println();
+  //tft.println();
+  //tft.setTextColor(CYAN);  
+  //tft.println("Volver   Alertas   Historial");
+}
+
+void setup()
+{
+	Serial.begin(9600);	
+  	
+	pinMode( LED_WM, OUTPUT );
+
+  // led on during setup
+  digitalWrite( LED_WM, true );
+
+  pinMode( BUZ_PIN, OUTPUT );
+  	
+	setup_rf();
+  //setup_lcd();
+  setup_tft();
+  
+  // set led to off after setup
+  digitalWrite( LED_WM, false );
+}
+
+
+void loop_rf()
+{
+  if(driver.recv(msg_buffer, &msg_buffer_length))
   {
     digitalWrite(LED_WM,true);
     
@@ -243,19 +258,23 @@ void loop()
     Serial.println(" Great! Received radio message" );
     //driver.printBuffer("Got: ", buf, buflen);
     Serial.print( "   Message length: ");
-    Serial.println( buflen );
+    Serial.println( msg_buffer_length );
+    
     String str="";
-    for (int i=0; ( i < 16 ) && ( i < buflen ); ++i )
-      str +=(char)buf[i];
+    
+    for (int i=0; ( i < 16 ) && ( i < msg_buffer_length ); ++i )
+      str +=(char)msg_buffer[i];
 
     Serial.print( "   Message data: \'");
     Serial.print( str );
     Serial.println( "\'");
 
     //Serial.print( "prev_t = " );
-    prev_t = millis(); 
+    msg_led_prev_t = millis(); 
     //Serial.println( prev_t );
 
+  
+    /*
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print( prev_t );
@@ -263,26 +282,34 @@ void loop()
     lcd.print( "msg: " );
     lcd.setCursor(0,2);
     lcd.print( str );
+    */
   }
 
 
-  if( prev_t ) {
+  if( msg_led_prev_t ) {
     //Serial.print( "curr_t = " );
     unsigned long curr_t = millis();
       
         //Serial.println( curr_t );
-    if( curr_t - prev_t >= wait_t ) {
+    if( curr_t - msg_led_prev_t >= msg_led_wait_t ) {
       digitalWrite(LED_WM,false); 
       noTone(BUZ_PIN);
-      prev_t = 0;
+      msg_led_prev_t = 0;
     }
 
-    if( curr_t - prev_t >= ( wait_t / 8 ) ) {
+    if( curr_t - msg_led_prev_t >= ( msg_led_wait_t / 8 ) ) {
       noTone(BUZ_PIN );
     }
   }
 
-  //Serial.print(".");
+}
+
+
+void loop()
+{
+
+  loop_rf();
+  
 }
 
 

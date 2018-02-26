@@ -1,32 +1,19 @@
+//#include <Adafruit_Sensor.h>
+
+
+#include "message.h"
+
+
+// SPI, SD needed due to console Arduino-Makefile usage
+#include <SPI.h>
+#include <SD.h>
+
 #include <RadioHead.h>
 #include <RH_ASK.h>
-/*
-  #include <RH_CC110.h>
-  #include <RH_E32.h>
-  #include <RH_MRF89.h>
-  #include <RH_NRF24.h>
-  #include <RH_NRF51.h>
-  #include <RH_NRF905.h>
-  #include <RH_RF22.h>
-  #include <RH_RF24.h>
-  #include <RH_RF69.h>
-  #include <RH_RF95.h>
-  #include <RH_Serial.h>
-  #include <RH_TCP.h>
-  #include <RHCRC.h>
-  #include <RHDatagram.h>
-  #include <RHEncryptedDriver.h>
-  #include <RHGenericDriver.h>
-  #include <RHGenericSPI.h>
-  #include <RHHardwareSPI.h>
-  #include <RHMesh.h>
-  #include <RHNRFSPIDriver.h>
-  #include <RHReliableDatagram.h>
-  #include <RHRouter.h>
-  #include <RHSoftwareSPI.h>
-  #include <RHSPIDriver.h>
-  #include <RHTcpProtocol.h>
-*/
+
+#include <DHT.h>
+
+
 /*
 	Client
 
@@ -55,25 +42,27 @@
 
 */
 
-//#include <VirtualWire.h>
-
 #define PIR_PIN 11
 #define RF_EMITTER_PIN 2
 #define LED_PIN 13
-
+#define DHT_PIN 3
 #define LED_BLINK_SLOW 100
 #define LED_BLINK_FAST 900
+
+#define DHTTYPE DHT22   // Sensor DHT22
+
+DHT dht(DHT_PIN, DHTTYPE);
+
+unsigned long dht_wait_t = 3500;
+unsigned long dht_prev_t = 0;
+
 
 bool g_led_onoff = false;
 unsigned long g_led_blink_prev_t = 0;
 unsigned long g_check_pir_t = 0;
 bool g_pir_prev_state = LOW;
 
-
 #define CLIENT_ADDRESS 1
-
-// 2000 bps, RX ( D4, pin 3 ), TX ( D3, pin 2 )
-//RH_ASK driver( 2000, 3 );
 
 // 2000 bps, sending ( TX ) through D9   ( don't know whether D2 and D10 are used )
 RH_ASK driver( 2000, 2, 9, 10 );
@@ -82,7 +71,7 @@ RH_ASK driver( 2000, 2, 9, 10 );
 
 //uint8_t msg_data[] = "ALARM!! Presence detected in the room!";
 //uint8_t msg_buf[RH_ASK_MAX_MESSAGE_LEN];
-const char * msg_data = "ALARM!! Presence detected in the room!";
+// const char * msg_data = "ALARM!! Presence detected in the room!";
 
 void _blink_led( unsigned long wait_t )
 {
@@ -147,6 +136,9 @@ void setup()
     Serial.println("Radio transmitter initialized correctly" );
   }
 
+  dht.begin();
+  Serial.println("DHT22 ready");
+  
   // RF bits per second
   //vw_setup(2000);
   //vw_set_tx_pin( RF_EMITTER_PIN );
@@ -174,13 +166,21 @@ void loop()
       g_led_onoff = true;
       digitalWrite( LED_PIN, HIGH );
 
-      // Send radio message
-      //const char * msg = "ALARM! Presence in the room";
-      Serial.println("   going to send radio message" );
-      driver.send((uint8_t*)msg_data, strlen(msg_data) );
-      Serial.println( "   waiting for packet sent" );
-      driver.waitPacketSent();
-      Serial.println( "   Alarm message has been sent" );
+      msc::message msg;
+      String s = msg.serialize();
+      
+      //Serial.println(" ** going to send radio message" );
+      //driver.send((uint8_t*)s.toCharArray(), s.length() );
+      //Serial.println( "   waiting for packet to be sent" );
+      //driver.waitPacketSent();
+      //Serial.println( "** radio message has been sent" );
+  
+      // Send radio message      
+      //Serial.println("   going to send radio message" );
+      //driver.send((uint8_t*)msg_data, strlen(msg_data) );
+      //Serial.println( "   waiting for packet sent" );
+      //driver.waitPacketSent();
+      //Serial.println( "   Alarm message has been sent" );
     }
 
     //_blink_led( LED_BLINK_SLOW );
@@ -195,5 +195,68 @@ void loop()
   }
 
   g_pir_prev_state = pir_val;
+
+
+    
+  
+  unsigned long dht_curr_t = millis();
+  
+  if( !dht_prev_t )
+    dht_prev_t = dht_curr_t;
+  
+  if( dht_curr_t - dht_prev_t >= dht_wait_t )
+  {
+    float h = dht.readHumidity();
+
+    // temperature in ºC
+    float t = dht.readTemperature();      
+  
+    // float f = dht.readTemperature(true);  // Fahrenheit
+        
+    Serial.print("Humedad ");
+    Serial.print(h);
+    Serial.print(" %t");
+    Serial.print("Temperatura: ");
+    Serial.print(t);
+    Serial.print(" *C ");
+
+    /*
+    String s = "T: ";
+    s += t;
+    s += " | H: ";
+    s += h;
+    
+    char buff[s.length()+1];
+    s.toCharArray(buff,s.length()+1);
+    
+      Serial.println("   going to send temperature radio message" );
+      driver.send((uint8_t*)buff, strlen(buff) );
+      Serial.println( "   waiting for packet to be sent" );
+      driver.waitPacketSent();
+      Serial.println( "   Temperature radio message has been sent" );
+
+    */
+    msc::message msg;
+   
+    msg.header.set_info( "Room-01" );
+    msg.header.type = msc::message_type::MT_DHT22;
+     
+    msg.body.body_dht22.temperature = t;
+    msg.body.body_dht22.humidity = h;
+
+    String s2 = msg.serialize();
+    char buff2[s2.length()+1];
+    s2.toCharArray(buff2,s2.length()+1);
+    Serial.println("   going to send temperature radio message" );
+      driver.send((uint8_t*)buff2, strlen(buff2) );
+      Serial.println( "   waiting for packet to be sent" );
+      driver.waitPacketSent();
+      Serial.println( "   Temperature radio message has been sent" );
+
+    
+    dht_prev_t = 0;
+  }
+
+  
 }
 
