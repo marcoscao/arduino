@@ -6,7 +6,7 @@
 
 // SPI, SD needed due to console Arduino-Makefile usage
 #include <SPI.h>
-#include <SD.h>
+//#include <SD.h>
 
 #include <RadioHead.h>
 #include <RH_ASK.h>
@@ -238,7 +238,7 @@ void loop()
     */
     msc::message msg;
    
-    msg.header.set_info( "Room-01" );
+    msg.header.info = "Room-01";
     msg.header.type = msc::message_type::MT_DHT22;
      
     msg.body.body_dht22.temperature = t;
@@ -247,7 +247,9 @@ void loop()
     String s2 = msg.serialize();
     char buff2[s2.length()+1];
     s2.toCharArray(buff2,s2.length()+1);
-    Serial.println("   going to send temperature radio message" );
+    Serial.println("   going to send DHT22 message: " );
+    Serial.println( s2 );
+    Serial.println( buff2 );   
       driver.send((uint8_t*)buff2, strlen(buff2) );
       Serial.println( "   waiting for packet to be sent" );
       driver.waitPacketSent();

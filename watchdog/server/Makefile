@@ -1,11 +1,24 @@
 # Arduino Make file. Refer to https://github.com/sudar/Arduino-Makefile
 
 #USER_LIB_PATH := ../core
+ARDUINO_DIR=/Applications/Arduino.app/Contents/Java
+ARDMK_DIR=/usr/local/opt/arduino-mk
+USER_LIB_PATH=/Users/mscao/Documents/Arduino/libraries
+#ARDUINO_LIBS=DHT_sensor_library SPI SD RadioHead Adafruit_Unified_Sensor msc-lib/core
 
-ARDUINO_DIR=$(HOME)/work/ide/arduino-1.8.5
-ARDMK_DIR=/home/optiva/.arduino_mk
 
-ARDUINO_LIBS=DHT-sensor-library-master SPI SD RadioHead Adafruit_Sensor-master Adafruit_GFX Adafruit_TFTLCD TouchScreen MCUFRIEND_kbv msc-lib/core 
+#BOARD_TAG    = uno
+#include $(ARDMK_DIR)/Arduino.mk
+
+MONITOR_PORT = /dev/tty.wchusbserialfa130
+#MONITOR_PORT = /dev/tty.wchusbserialfd120
+
+
+#ARDUINO_DIR=$(HOME)/work/ide/arduino-1.8.5
+#ARDMK_DIR=/home/optiva/.arduino_mk
+
+#ARDUINO_LIBS=DHT_sensor_library SPI SD RadioHead Adafruit_Unified_Sensor Adafruit_GFX_Library Adafruit_TFTLCD TouchScreen MCUFRIEND_kbv msc-lib/core 
+ARDUINO_LIBS=DHT_sensor_library SPI SD RadioHead Adafruit_Unified_Sensor Adafruit_GFX_Library MCUFRIEND_kbv TFTLCD-Library-master Touch-Screen-Library-master msc-lib/core 
 
 BOARD_TAG    	= nano
 BOARD_SUB  	= atmega328
@@ -19,7 +32,7 @@ BOARD_SUB  	= atmega328
 include $(ARDMK_DIR)/Arduino.mk
 
 #MONITOR_PORT  = /dev/ttyACM0
-MONITOR_PORT  = /dev/ttyUSB0
+#MONITOR_PORT  = /dev/ttyUSB0
 
 
 # --- leonardo (or pro micro w/leo bootloader)

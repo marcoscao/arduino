@@ -11,9 +11,7 @@ ARDUINO_LIBS=DHT_sensor_library SPI SD RadioHead Adafruit_Unified_Sensor msc-lib
 BOARD_TAG    = uno
 include $(ARDMK_DIR)/Arduino.mk
 
-MONITOR_PORT = /dev/tty.wchusbserialfa130
-
-#MONITOR_PORT  = /dev/ttyACM0
+MONITOR_PORT  = /dev/ttyACM0
 
 
 # --- leonardo (or pro micro w/leo bootloader)
